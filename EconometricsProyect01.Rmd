@@ -1,0 +1,333 @@
+---
+title: "Proyecto Entrega1"
+author: "Oscar Brandon Velazquez de Paz, Mauricio Lopez Zamora, Angel Ivan Franco Garcia"
+date: "2023-09-22"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+Cargamos las librerías y el archivo con el que vamos a trabajar
+```{r}
+install.packages("tinytex")
+tinytex::install_tinytex()
+tinytex::install_tinytex()
+
+```
+
+
+```{r}
+library(dplyr)
+library(readxl)
+library(countrycode)
+library(ggplot2)
+data <- read_excel(path = "customer_data.xlsx")
+#data = data.frame(read_csv("Econometría/data_customer.csv"))
+```
+Vamos a renombrar a las variables y mostrar los primeros renglones para visualizar un poco los datos
+
+```{r}
+colnames(data) = c("Nombre","Edad","Género","Nivel_estudios","Ingreso","País",
+                   "Frecuencia_compras","Gasto_anual")
+head(data, n=5)
+```
+
+Vamos a verificar si hay valores nulos dentro de algún elemento de los datos.
+Tenemos las variables distribuidas de la siguiente forma:
+Categóricas: Nombre, Género, Nivel_Estudios y País. 
+Numéricas: Edad, Ingreso, Frecuencia_compras, Gasto_anual
+
+```{r}
+#Para las variables numéricas
+sum(is.nan(data$Edad))
+sum(is.nan(data$Ingreso))
+sum(is.nan(data$Frecuencia_compras))
+sum(is.nan(data$Gasto_anual))
+
+#Para las variables categóricas
+hay_nan = any(sapply(data$Nombre, is.na))
+hay_nan1 = any(sapply(data$Género, is.na))
+hay_nan2 = any(sapply(data$Nivel_estudios, is.na))
+hay_nan3 = any(sapply(data$País, is.na))
+c(hay_nan,hay_nan1,hay_nan2,hay_nan3)
+c
+```
+Como no hay datos nulos, dejamos la base tal cual está
+
+
+Ahora haremos el análisis estadístico de las variables, empezaremos primero por las variables categóricas
+
+```{r}
+#Apartamos en un dataframe las variables categóricas para trabajar con ellas 
+#Decidimos no trabajar con el nombre ya que nos es irrelevante
+categoricas = data[,c("Género","Nivel_estudios","País")]
+```
+
+Dado que hay muchos países dentro de la base de datos los agruparemos por continente para poder visuzalizarlos de mejor manera. 
+Les pondremos S_I (sin identificar) a aquellos países a los cuales R no pueda asignarles algún continente
+
+```{r}
+#Para poder utilizar la función en la que agrupamos a los países por continentes necesitamos que los datos sean de tipo dataframe
+class(categoricas$País)
+pais = data.frame(categoricas$País)
+class(pais)
+
+continente = pais %>%
+  mutate(Continent = countrycode(pais$categoricas.País,origin = "country.name",
+                                 destination = "continent"))
+continente = data.frame(continente)
+colnames(continente) = c("País","Continente")
+continente[["Continente"]] = ifelse(is.na(continente[["Continente"]]),
+                               "S_I", continente[["Continente"]])
+```
+
+Creamos una función que genere un gráfico de pay para cada una de las variables categóricas
+
+```{r}
+#Función
+grafico_pie = function(dataframe, columna) {
+  # Calcular las frecuencias y porcentajes
+  frecuencias = table(dataframe[[columna]])
+  porcentajes = prop.table(frecuencias) * 100
+  
+  # Crear un dataframe con las categorías, frecuencias y porcentajes
+  df_porcentajes = data.frame(
+    Categoria = as.character(names(frecuencias)),
+    Frecuencia = as.numeric(frecuencias),
+    Porcentaje = as.numeric(porcentajes)
+  )
+  nombre =  deparse(substitute(columna))
+  # Crear el gráfico de pastel
+  grafico <- ggplot(df_porcentajes, aes(x = "", y = Porcentaje, fill = Categoria)) +
+    geom_bar(stat = "identity") +
+    coord_polar(theta = "y") +
+    labs(title = paste("Gráfica para", nombre), fill = "Categorias") +
+    theme_void() +
+    theme(legend.position = "bottom") +
+    geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), position = position_stack(vjust = 0.5))
+  
+  # Mostrar el gráfico
+  print(grafico)
+}
+
+#Gráficos
+grafico_pie(categoricas,columna = "Género")
+grafico_pie(continente, columna = "Continente")
+grafico_pie(categoricas,columna = "Nivel_estudios")
+```
+
+Algo que podemos notar a primera instancia es:
+1. Tenemos casi la misma cantidad de hombres que de mujeres 
+2. Poco más de una cuarta parte de los datos provienen del continente africano
+3. Se tienen casi la misma cantidad de personas por cada sector de grado de estudios
+
+Hacemos el análisis de las variables numéricas 
+
+```{r}
+numericas = data[, c("Edad", "Ingreso", "Frecuencia_compras","Gasto_anual")]
+summary(numericas)
+```
+Mostramos los histogramas 
+
+```{r}
+histograma <- function(data, columna, bins = 30) {
+  ggplot(data, aes(x = !!sym(columna))) +
+    geom_histogram(binwidth = (max(data[[columna]]) - min(data[[columna]])) / bins,
+                   fill = "blue", color = "black", alpha = 0.7) +
+    labs(title = paste("Histograma de", columna),
+         x = columna,
+         y = "Frecuencia") +
+    theme_minimal()
+}
+
+
+histograma(numericas,"Gasto_anual")
+histograma(numericas,"Frecuencia_compras")
+histograma(numericas,"Ingreso")
+histograma(numericas,"Edad")
+```
+
+Mostramos los diagramas de dispersión 
+
+```{r}
+plot((numericas$Ingreso),(numericas$Gasto_anual))
+plot(numericas$Edad,numericas$Gasto_anual)
+```
+
+Veamos también las correlaciones entre las variables 
+
+```{r}
+cor(numericas)
+```
+
+
+Primero notamos que la variable Frecuencia_compras parece ser de tipo categórica y no numérica, a pesar de tener una correlación alta en estos momentos no podemos trabajar con dicha variable. 
+Para escoger a la variable dependiente se va a tomar en cuenta los datos, pues no podemos considerar a la edad como variable dependiente del ingreso o del gasto anual del cliente, ni tampoco considerar al ingreso dependiente del gasto anual, así que la variable dependiente será el gasto anual.
+
+Además, como no podemos notar una relación clara a primera instancia entre las variables, vamos a considerar 3 casos y de ahí escoger el que tenga la mayor R^2.
+1. Considerando el continente que más gasto (en promedio) tiene
+2. Considerando el nivel de estudios que más gasto (en promedio) tiene
+3. Considerando que la frecuencia de compras es mayor o igual a 0.7
+
+
+Análisis por continente
+
+```{r}
+data["Continente"] = continente$Continente
+grupos_c = data %>%
+  group_by(Continente)
+resumen = grupos_c %>%
+  summarise(media_gastos = mean(Gasto_anual),
+            media_ingresos = mean(Ingreso))
+resumen
+```
+
+El continente en el que más gasto anual (en promedio) se tiene es Europa, así que vamos a trabajar con el continente europeo para ver si podemos hacer un análisis como tal 
+
+```{r}
+grupos_c = data.frame(grupos_c)
+data_ce = subset(grupos_c, Continente == "Europe")
+plot(data_ce$Ingreso,data_ce$Gasto_anual, 
+    xlab = "Ingreso", ylab = "Gasto anual",
+    title("Diagrama de dispersión"))
+plot(log(data_ce$Ingreso),log(data_ce$Gasto_anual), 
+    xlab = "Ingreso", ylab = "Gasto anual",
+    title("Diagrama de disperión (logaritmico)"))
+```
+```{r}
+x = log(data_ce$Ingreso)
+y = log(data_ce$Gasto_anual)
+modelo1 = lm(x ~ y)
+summary(modelo1)
+coeficientes = coef(modelo1)
+print(coeficientes)
+
+grafico_dispersión <- ggplot(data = NULL, aes(x = x, y = y)) +
+  geom_point(color = "grey", size = 3) +
+  labs(title = "Diagrama de Dispersión (considerando continente europeo)",
+       x = "Variable X", y = "Variable Y") +
+  theme_minimal()
+grafico_completo <- grafico_dispersión +
+  geom_smooth(method = "lm", se = FALSE, color = "red")
+print(grafico_completo)
+```
+
+
+Análisis escogiendo nivel de estudios
+
+```{r}
+grupos_ne = data %>%
+  group_by(Nivel_estudios)
+resumen = grupos_ne %>%
+  summarise(media_gastos = mean(Gasto_anual),
+            media_ingresos = mean(Ingreso))
+resumen
+```
+
+Notamos que la personas que en promedio más gastos anuales presentan son las que tienen PhD
+
+```{r}
+grupos_ne = data.frame(grupos_ne)
+data_nephd = subset(grupos_ne, Nivel_estudios == "PhD")
+plot(data_nephd$Ingreso,data_nephd$Gasto_anual, 
+    xlab = "Ingreso", ylab = "Gasto anual",
+    title("Diagrama de dispersión"))
+plot(log(data_nephd$Ingreso),log(data_nephd$Gasto_anual), 
+    xlab = "Ingreso", ylab = "Gasto anual",
+    title("Diagrama de disperión (logaritmico)"))
+```
+
+```{r}
+x = log(data_nephd$Ingreso)
+y = log(data_nephd$Gasto_anual)
+modelo2 = lm(x ~ y)
+summary(modelo2)
+coeficientes = coef(modelo2)
+print(coeficientes)
+
+grafico_dispersión <- ggplot(data = NULL, aes(x = x, y = y)) +
+  geom_point(color = "grey", size = 3) +
+  labs(title = "Diagrama de Dispersión PhD",
+       x = "log(Ingreso)", y = "log(Gasto anual)") +
+  theme_minimal()
+grafico_completo <- grafico_dispersión +
+  geom_smooth(method = "lm", se = FALSE, color = "red")
+print(grafico_completo)
+```
+
+
+
+Ahora vamos a realizar un análisis considerando que frecuencia_compras sea mayor o igual a 0.7
+
+```{r}
+grupos_fc = data %>%
+  group_by(Frecuencia_compras >= 0.7)
+resumen = grupos_fc %>%
+  summarise(media_gastos = mean(Gasto_anual),
+            media_ingresos = mean(Ingreso))
+resumen
+
+#max_gastos = max(Gasto_anual),
+#max_ingresos = max(Ingreso))
+```
+
+```{r}
+data_fc = subset(grupos_fc, Frecuencia_compras >= 0.7)
+plot(data_fc$Ingreso,data_fc$Gasto_anual, 
+    xlab = "Ingreso", ylab = "Gasto anual",
+    title("Diagrama de dispersión")+
+      theme_minimal())
+plot(log(data_fc$Ingreso),log(data_fc$Gasto_anual), 
+    xlab = "Ingreso", ylab = "Gasto anual",
+    title("Diagrama de dispersión (logarítmico)")+
+      theme_minimal())
+```
+
+```{r}
+x = log(data_fc$Ingreso)
+y = log(data_fc$Gasto_anual)
+modelo3 = lm(x ~ y)
+summary(modelo3)
+coeficientes = coef(modelo3)
+print(coeficientes)
+
+grafico_dispersión <- ggplot(data = NULL, aes(x = x, y = y)) +
+  geom_point(color = "grey", size = 3) +
+  labs(title = "Diagrama de Dispersión con fc=>0.7",
+       x = "log(Ingreso)", y = "log(Gasto anual)") +
+  theme_minimal()
+grafico_completo <- grafico_dispersión +
+  geom_smooth(method = "lm", se = FALSE, color = "red")
+print(grafico_completo)
+```
+
+Comparamos los valores de R^2 y escogemos el menor de ellos 
+
+```{r}
+r_squared_values <- c(summary(modelo1)$r.squared, summary(modelo2)$r.squared,
+                      summary(modelo3)$r.squared)
+print(r_squared_values)
+```
+
+Escogemos el modelo utilizando frecuencia de compras mayor o igual a 0.7.
+
+De acuerdo con el modelo tenemos que el valor de R^2 es de 0.0429 y el ajustado de 0.04054. lo cual quiere decir que el modelo casi no explica a la variable dependiente.
+
+Por otro lado, tenemos que la variable explicativa es medianamente significativa
+
+Intervalo de confianza 
+```{r}
+confint(modelo3)
+```
+
+
+
+
+
+
+
+
+
+
+

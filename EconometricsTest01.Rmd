@@ -1,0 +1,129 @@
+---
+title: "Examen1 Econometria"
+author: "Angel Ivan Franco Garcia"
+date: "2023-10-07"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+library(dplyr)
+library(readxl)
+library(ggplot2)
+data_test2<-
+```
+```{r}
+#Dado que el problema especifica que usemos informacion del Salario y Educacion solo para la poblacion de hombres, eliminamos las columnas que no nos interesan (promedio y mujeres), y renombramos las de interes para mejor manejo
+colnames(data_test2) = c("Estado", "Años de educación","Salario")
+head(data_test2, n=5)
+```
+a)
+```{r}
+# Estadísticas para la educación
+educacion_estadisticas <- summary(data_test2$`Años de educación`)
+educacion_media <- mean(data_test2$`Años de educación`)
+educacion_mediana <- median(data_test2$`Años de educación`)
+educacion_cuartiles <- quantile(data_test2$`Años de educación`, c(0.25, 0.75))
+educacion_desviacion <- sd(data_test2$`Años de educación`)
+educacion_moda <- names(sort(-table(data_test2$`Años de educación`)))[1]
+educacion_num_observaciones <- length(data_test2$`Años de educación`)
+
+cat("Estadísticas para la educación:\n")
+cat("Media:", educacion_media, "\n")
+cat("Mediana:", educacion_mediana, "\n")
+cat("Cuartiles (25% y 75%):", educacion_cuartiles, "\n")
+cat("Desviación estándar:", educacion_desviacion, "\n")
+cat("Moda:", educacion_moda, "\n")
+cat("Número de observaciones:", educacion_num_observaciones, "\n\n")
+
+```
+```{r}
+# Estadísticas para el salario
+salario_estadisticas <- summary(data_test2$Salario)
+salario_media <- mean(data_test2$Salario)
+salario_mediana <- median(data_test2$Salario)
+salario_cuartiles <- quantile(data_test2$Salario, c(0.25, 0.75))
+salario_desviacion <- sd(data_test2$Salario)
+salario_moda <-names(sort(-table(data_test2$`Salario`)))[1]
+salario_num_observaciones <- length(data_test2$Salario)
+
+cat("Estadísticas para el salario:\n")
+cat("Media:", salario_media, "\n")
+cat("Mediana:", salario_mediana, "\n")
+cat("Cuartiles (25% y 75%):", salario_cuartiles, "\n")
+cat("Desviación estándar:", salario_desviacion, "\n")
+cat("Moda:", salario_moda, "\n")
+cat("Número de observaciones:", salario_num_observaciones, "\n")
+
+```
+b)
+```{r}
+# Boxplots
+boxplot(data_test2$`Años de educación`, main="Boxplot Educación")
+boxplot(data_test2$Salario, main="Boxplot Salario")
+```
+```{r}
+plot(data_test2$`Años de educación`, main="Plot Educación")
+plot(data_test2$`Salario`, main="Plot Salario")
+
+```
+Analizando nuestros gráficos, se ven relativamente constantes, notando en el boxplot de Educacion que parece existir un outlier de la Ciudad de Mexico con 11.67 años de estudio, que si analizamos las muestras, tenemos una media de 9.78 y considerando que nuestra base de datos tiene solo 32 Estados, decidiré no eliminar este renglon puesto que no estan grande la diferencia con la media y estariamos perdiendo informacion en la base que no es tan grande.
+
+c)
+```{r}
+plot(data_test2$`Años de educación`, data_test2$Salario, pch=16, main="Gráfico de Dispersión", xlab="Años de educación", ylab="Salario")
+
+# Agregamos etiquetas 
+text(data_test2$`Años de educación`, data_test2$Salario, labels=data_test2$Estado, pos=4, cex=0.5)
+
+```
+
+d)
+```{r}
+#En este caso me parece coherente decir que los Años de educacion es la variable independiente y es Salario la variable dependiente puesto que en el grafico anterior podemos notar una tendencia de entre mas educacion, mas salario. Decimos Salario=B_0 + (B_1)(Educacion) + u
+# Estimar el modelo de regresión
+modelo <- lm(Salario ~ `Años de educación`, data=data_test2)
+
+# Resumen del modelo
+summary(modelo)
+
+
+```
+-Notemos del summary que Beta^_0=13.96 y Beta^_1=38.13 i.e. distintos de cero.
+
+-Notemos que tenemos un R^2= 0.32, i.e. el 32% del salario es explicado por la educacion, lo cual no es optimo, en teria buscamo un R^2=1, pero considerando los resultados que obtuvimos en nuestro proyecto y el de los demás equipos me atrevería a decir que si lo explica relativamente bien.
+
+```{r}
+#Veamos cuanto seria el salario de la CDMX si la educacion fuera de 12.5 años segun nuestro modelo:
+beta_0<-13.96
+beta_1<-38.13
+educacion<-12.5
+pred_salario<- beta_0 + beta_1*educacion
+cat("Segun nuestro modelo, si la educacion fuera de 12.5 el salario seria:",pred_salario)
+```
+
+```{r}
+#Nuestro modelo si podria mejorar puesto que en la tabla la CDMX tiene 11.67 de educacion y salario de 516.58, veamos como mejorar nuestra aproximacion considerando implementando una constante
+u<- -beta_0 - beta_1*11.67 +516.58
+
+pred_salario2<- beta_0 + beta_1*educacion + u
+cat("Mejorando nuestra aproximacion, veamos que nuestra nueva prediccion de salario seria:",pred_salario2)
+```
+
+e)
+```{r}
+# Estimar el modelo de regresión
+modelo <- lm(Salario ~ `Años de educación`, data = data_test2)
+
+plot(data_test2$`Años de educación`, data_test2$Salario, pch=16, main="Plot Salario", xlab="Años de educación", ylab="Salario")
+
+abline(a = beta_0, b = beta_1, col="red", lwd=2) #Linea de regresion original
+abline(a = (beta_0-u), b = beta_1, col="blue", lwd=2) #Linea de regresion mejorando el modelo para d.3)
+```
+
+
+
+
+
+
