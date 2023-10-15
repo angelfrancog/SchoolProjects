@@ -10,15 +10,7 @@ Fijamos los datos con los que vamos a trabajar, que corresponden a la poblacion 
 library(stats)
 library(tseries) 
 
-
-
-
-#Establece el directorio trabajo
-#setwd("/Users/danielpinedabejar/Desktop/ACTUARIA")
-
-#datos <- read.csv("EJERCICIO8.csv", header = FALSE)
-datos
-datos_anuales <- read.csv("ejercicio8anual.csv", header = FALSE)
+datos_anuales <- read.csv("Statistics01.csv", header = FALSE)
 datos_anuales
 ```
 
