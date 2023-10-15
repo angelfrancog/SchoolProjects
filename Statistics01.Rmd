@@ -13,8 +13,7 @@ library(tseries)
 
 
 
-#Establece el directorio trabajo
-#setwd("/Users/danielpinedabejar/Desktop/ACTUARIA")
+
 
 #datos <- read.csv("EJERCICIO8.csv", header = FALSE)
 datos
